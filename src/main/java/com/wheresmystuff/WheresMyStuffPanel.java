@@ -11,7 +11,6 @@ import java.awt.FlowLayout;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import javax.swing.JComponent;
-import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
