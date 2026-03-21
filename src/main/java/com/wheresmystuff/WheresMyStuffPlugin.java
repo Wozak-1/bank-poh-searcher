@@ -14,10 +14,9 @@ import net.runelite.api.Client;
 import java.util.Optional;
 import net.runelite.api.GameState;
 import net.runelite.api.InventoryID;
-import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.api.Item;
-import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.events.GameStateChanged;
@@ -31,21 +30,20 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
-import net.runelite.api.events.GameTick;import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.api.events.GameTick;
+import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.api.ChatMessageType;
 import net.runelite.client.util.ColorUtil;
 
 @PluginDescriptor(
 		name = "Where's my stuff",
-		description = "Search saved bank and POH storage snapshots from a sidebar panel",
+		description = "Search bank and POH storage snapshots",
 		tags = {"bank", "poh", "house", "storage", "search", "panel"}
 )
 public class WheresMyStuffPlugin extends Plugin
 {
 	private NavigationButton navigationButton;
-
-	private boolean shouldDebug;
 
 	@Inject
 	private Client client;
@@ -84,7 +82,7 @@ public class WheresMyStuffPlugin extends Plugin
 	private int pendingBankRescanTicks = 0;
 	private boolean isBankOpen()
 	{
-		return client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER) != null;
+		return client.getWidget(ComponentID.BANK_ITEM_CONTAINER) != null;
 	}
 
 	@Provides
