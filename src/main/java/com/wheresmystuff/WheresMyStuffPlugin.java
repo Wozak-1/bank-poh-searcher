@@ -37,9 +37,9 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.client.util.ColorUtil;
 
 @PluginDescriptor(
-		name = "Where's my stuff",
+		name = "Bank and POH search",
 		description = "Search bank and POH storage snapshots",
-		tags = {"bank", "poh", "house", "storage", "search", "panel"}
+		tags = {"bank", "poh", "house", "storage", "search", "panel", "stuff"}
 )
 public class WheresMyStuffPlugin extends Plugin
 {
