@@ -48,6 +48,6 @@ public interface WheresMyStuffConfig extends Config
 	)
 	default boolean debugg()
 	{
-		return true;
+		return false;
 	}
 }
