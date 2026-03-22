@@ -151,7 +151,7 @@ public class WheresMyStuffPanel extends PluginPanel
 		panel.setLayout(new BorderLayout());
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-		JLabel title = new JLabel("Where’s My Stuff");
+		JLabel title = new JLabel("Bank/POH Searcher");
 		title.setForeground(HEADER);
 		title.setFont(title.getFont().deriveFont(java.awt.Font.BOLD, 16f));
 		title.setHorizontalAlignment(SwingConstants.CENTER);
