@@ -98,6 +98,9 @@ public class WheresMyStuffPanel extends PluginPanel
 		startAutoRefreshTimer();
 	}
 
+	@Inject
+	private WheresMyStuffConfig config;
+
 	private JList<StoredItem> createItemList(DefaultListModel<StoredItem> model, boolean showLocation)
 	{
 		JList<StoredItem> list = new JList<>(model);
@@ -151,7 +154,7 @@ public class WheresMyStuffPanel extends PluginPanel
 		panel.setLayout(new BorderLayout());
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-		JLabel title = new JLabel("Where’s My Stuff");
+		JLabel title = new JLabel("Bank/POH Searcher");
 		title.setForeground(HEADER);
 		title.setFont(title.getFont().deriveFont(java.awt.Font.BOLD, 16f));
 		title.setHorizontalAlignment(SwingConstants.CENTER);
@@ -368,6 +371,8 @@ public class WheresMyStuffPanel extends PluginPanel
 			{
 				return createZeroButton();
 			}
+
+
 
 			@Override
 			protected JButton createIncreaseButton(int orientation)
@@ -691,11 +696,11 @@ public class WheresMyStuffPanel extends PluginPanel
 		long ageMillis = Math.max(0, now - metadata.getLastUpdated());
 		long hours = ageMillis / (1000L * 60L * 60L);
 
-		if (hours < 12)
+		if (hours < config.warningAfterHours())
 		{
 			return DataFreshness.FRESH;
 		}
-		else if (hours < 72)
+		else if (hours < config.staleAfterHours())
 		{
 			return DataFreshness.MAYBE_STALE;
 		}

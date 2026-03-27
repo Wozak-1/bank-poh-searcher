@@ -179,50 +179,6 @@ public class PohStorageScanner
 		return quantities;
 	}
 
-	public String debugWidgetSummary(int groupId)
-	{
-		List<Widget> roots = getRootWidgets(groupId);
-		StringBuilder sb = new StringBuilder();
-
-		int count = 0;
-		for (Widget root : roots)
-		{
-			for (Widget widget : traverse(root))
-			{
-				String text = widget.getText();
-				String name = widget.getName();
-				int itemId = widget.getItemId();
-				int qty = widget.getItemQuantity();
-				int spriteId = widget.getSpriteId();
-				int modelId = widget.getModelId();
-
-				if ((text != null && !text.isEmpty())
-						|| (name != null && !name.isEmpty())
-						|| itemId > 0
-						|| spriteId > 0
-						|| modelId > 0)
-				{
-					sb.append("child ")
-							.append(count)
-							.append(": text='").append(text).append('\'')
-							.append(" name='").append(name).append('\'')
-							.append(" itemId=").append(itemId)
-							.append(" qty=").append(qty)
-							.append(" spriteId=").append(spriteId)
-							.append(" modelId=").append(modelId)
-							.append('\n');
-				}
-
-				count++;
-				if (count >= 120)
-				{
-					return sb.toString();
-				}
-			}
-		}
-
-		return sb.toString();
-	}
 
 	private List<Widget> traverse(Widget root)
 	{

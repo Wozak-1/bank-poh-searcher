@@ -10,8 +10,6 @@ import java.awt.image.BufferedImage;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -48,30 +46,6 @@ public class StoredItemListCellRenderer extends JPanel implements ListCellRender
     private final JPanel locationRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
     private final JLabel locationBadge = new JLabel();
 
-    private ImageIcon createPlaceholderIcon()
-    {
-        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-
-        g.setColor(new Color(38, 38, 38));
-        g.fillRoundRect(0, 0, 32, 32, 6, 6);
-
-        g.setColor(new Color(72, 72, 72));
-        g.drawRoundRect(0, 0, 31, 31, 6, 6);
-
-        g.setColor(new Color(28, 28, 28));
-        g.fillRoundRect(3, 3, 26, 26, 4, 4);
-
-        g.setColor(new Color(175, 175, 175));
-        g.setFont(g.getFont().deriveFont(Font.BOLD, 8f));
-        g.drawString("load", 6, 18);
-
-        g.dispose();
-        return new ImageIcon(img);
-    }
 
     public StoredItemListCellRenderer(ItemManager itemManager, boolean showLocation)
     {

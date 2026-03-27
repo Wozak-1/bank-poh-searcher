@@ -41,9 +41,4 @@ public enum StorageLocation
 	{
 		return configKey;
 	}
-
-	public List<String> getKeywords()
-	{
-		return keywords;
-	}
 }

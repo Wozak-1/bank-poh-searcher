@@ -37,7 +37,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.client.util.ColorUtil;
 
 @PluginDescriptor(
-		name = "Where's my stuff",
+		name = "Bank and POH Seacher",
 		description = "Search bank and POH storage snapshots",
 		tags = {"bank", "poh", "house", "storage", "search", "panel"}
 )
@@ -105,7 +105,7 @@ public class WheresMyStuffPlugin extends Plugin
 		}
 
 		navigationButton = NavigationButton.builder()
-				.tooltip("Where's my stuff")
+				.tooltip("Bank/POH Seacher")
 				.icon(icon)
 				.priority(24)
 				.panel(panel)
@@ -333,15 +333,7 @@ public class WheresMyStuffPlugin extends Plugin
 		});
 	}
 
-	public List<StoredItem> buildBankRowsSafe()
-	{
-		return buildBankRows();
-	}
 
-	public List<StoredItem> buildPohRowsSafe()
-	{
-		return buildPohRows();
-	}
 
 	private void persistAllSnapshots()
 	{
@@ -402,24 +394,7 @@ public class WheresMyStuffPlugin extends Plugin
 		return new EnumMap<>(snapshots);
 	}
 
-	public WheresMyStuffConfig getConfig()
-	{
-		return config;
-	}
 
-	private int normalizeItemId(int itemId)
-	{
-		try
-		{
-			int canonical = itemManager.canonicalize(itemId);
-			return canonical > 0 ? canonical : itemId;
-		}
-		catch (Exception e)
-		{
-			debug("canonicalize failed for id=" + itemId);
-			return itemId;
-		}
-	}
 
 	public List<StoredItem> buildBankRows()
 	{
@@ -511,7 +486,7 @@ public class WheresMyStuffPlugin extends Plugin
 			{
 				debug("lookup failed rawId=" + rawId
 						+ " type=" + e.getClass().getSimpleName()
-						+ " msg=" + String.valueOf(e.getMessage()));
+						+ " msg=" + (e.getMessage()));
 			}
 
 			rows.add(new StoredItem(
