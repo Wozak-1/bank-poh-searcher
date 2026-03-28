@@ -6,9 +6,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import net.runelite.api.EquipmentInventorySlot;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
+import net.runelite.client.game.ItemEquipmentStats;
+import net.runelite.client.game.ItemStats;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import java.util.Optional;
@@ -179,6 +182,93 @@ public class WheresMyStuffPlugin extends Plugin
 		);
 	}
 
+	private EquipmentStats buildEquipmentStats(ItemStats itemStats)
+	{
+		if (itemStats == null)
+		{
+			return null;
+		}
+
+		ItemEquipmentStats eq = itemStats.getEquipment();
+		if (eq == null)
+		{
+			return null;
+		}
+
+		EquipmentStats stats = new EquipmentStats(
+				eq.getSlot(),
+				eq.isTwoHanded(),
+				eq.getAstab(),
+				eq.getAslash(),
+				eq.getAcrush(),
+				eq.getAmagic(),
+				eq.getArange(),
+
+				eq.getDstab(),
+				eq.getDslash(),
+				eq.getDcrush(),
+				eq.getDmagic(),
+				eq.getDrange(),
+
+				eq.getStr(),
+				eq.getRstr(),
+				Math.round(eq.getMdmg()),
+				eq.getPrayer()
+		);
+
+		return stats.hasAnyBonus() ? stats : null;
+	}
+
+	private Map<Integer, EquipmentStats> buildCurrentlyEquippedStatsBySlot()
+	{
+		Map<Integer, EquipmentStats> equippedBySlot = new HashMap<>();
+
+		ItemContainer worn = client.getItemContainer(InventoryID.EQUIPMENT);
+		if (worn == null)
+		{
+			return equippedBySlot;
+		}
+
+		Item[] wornItems = worn.getItems();
+		if (wornItems == null || wornItems.length == 0)
+		{
+			return equippedBySlot;
+		}
+
+		for (EquipmentInventorySlot slot : EquipmentInventorySlot.values())
+		{
+			int index = slot.getSlotIdx();
+			if (index < 0 || index >= wornItems.length)
+			{
+				continue;
+			}
+
+			Item equippedItem = wornItems[index];
+			if (equippedItem == null || equippedItem.getId() <= 0 || equippedItem.getQuantity() <= 0)
+			{
+				continue;
+			}
+
+			try
+			{
+				ItemStats itemStats = itemManager.getItemStats(equippedItem.getId());
+				EquipmentStats stats = buildEquipmentStats(itemStats);
+				if (stats != null)
+				{
+					equippedBySlot.put(stats.getSlot(), stats);
+				}
+			}
+			catch (Exception e)
+			{
+				debug("equipped lookup failed rawId=" + equippedItem.getId()
+						+ " type=" + e.getClass().getSimpleName()
+						+ " msg=" + String.valueOf(e.getMessage()));
+			}
+		}
+
+		return equippedBySlot;
+	}
+
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
@@ -192,13 +282,19 @@ public class WheresMyStuffPlugin extends Plugin
 			loadSnapshotsForCurrentProfile();
 		}
 
-		if (event.getContainerId() != InventoryID.BANK.getId())
+		int containerId = event.getContainerId();
+
+		if (containerId == InventoryID.BANK.getId())
 		{
+			pendingBankRescan = true;
+			pendingBankRescanTicks = 2;
 			return;
 		}
 
-		pendingBankRescan = true;
-		pendingBankRescanTicks = 2;
+		if (containerId == InventoryID.EQUIPMENT.getId())
+		{
+			requestPanelRefresh();
+		}
 	}
 
 	@Subscribe
@@ -444,6 +540,8 @@ public class WheresMyStuffPlugin extends Plugin
 			return rows;
 		}
 
+		Map<Integer, EquipmentStats> equippedBySlot = buildCurrentlyEquippedStatsBySlot();
+
 		int added = 0;
 
 		for (Map.Entry<Integer, Integer> entry : quantities.entrySet())
@@ -466,6 +564,8 @@ public class WheresMyStuffPlugin extends Plugin
 
 			String name = "Item " + rawId;
 			int price = 0;
+			EquipmentStats equipmentStats = null;
+			EquipmentStats comparisonStats = null;
 
 			try
 			{
@@ -481,12 +581,21 @@ public class WheresMyStuffPlugin extends Plugin
 				{
 					price = comp.getHaPrice();
 				}
+
+				ItemStats itemStats = itemManager.getItemStats(rawId);
+				equipmentStats = buildEquipmentStats(itemStats);
+
+				if (equipmentStats != null)
+				{
+					EquipmentStats equippedStats = equippedBySlot.get(equipmentStats.getSlot());
+					comparisonStats = equipmentStats.difference(equippedStats);
+				}
 			}
 			catch (Exception e)
 			{
 				debug("lookup failed rawId=" + rawId
 						+ " type=" + e.getClass().getSimpleName()
-						+ " msg=" + (e.getMessage()));
+						+ " msg=" + String.valueOf(e.getMessage()));
 			}
 
 			rows.add(new StoredItem(
@@ -494,7 +603,9 @@ public class WheresMyStuffPlugin extends Plugin
 					name,
 					qty,
 					price,
-					location
+					location,
+					equipmentStats,
+					comparisonStats
 			));
 			added++;
 		}

@@ -118,7 +118,9 @@ public class WheresMyStuffPanel extends PluginPanel
 				"25th anniversary skeleton costume top",
 				25000,
 				1500000,
-				showLocation ? StorageLocation.MAGIC_WARDROBE : StorageLocation.BANK
+				showLocation ? StorageLocation.MAGIC_WARDROBE : StorageLocation.BANK,
+				null,
+				null
 		));
 		return list;
 	}

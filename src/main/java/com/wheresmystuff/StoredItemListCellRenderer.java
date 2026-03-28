@@ -26,10 +26,10 @@ public class StoredItemListCellRenderer extends JPanel implements ListCellRender
     private static final Color PANEL_SELECTED = new Color(60, 88, 126);
     private static final Color BORDER = new Color(48, 48, 48);
     private static final Color NAME_COLOR = new Color(238, 238, 238);
-    private static final Color META_COLOR = new Color(165, 165, 165);
     private static final Color VALUE_COLOR = new Color(225, 212, 120);
     private static final Color QTY_BG = new Color(50, 50, 50);
     private static final Color LOCATION_BG = new Color(70, 70, 70);
+
     private final JLabel loadingLabel = new JLabel("loading");
 
     private final ItemManager itemManager;
@@ -45,7 +45,6 @@ public class StoredItemListCellRenderer extends JPanel implements ListCellRender
     private final JLabel valueBadge = new JLabel();
     private final JPanel locationRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
     private final JLabel locationBadge = new JLabel();
-
 
     public StoredItemListCellRenderer(ItemManager itemManager, boolean showLocation)
     {
@@ -143,7 +142,10 @@ public class StoredItemListCellRenderer extends JPanel implements ListCellRender
         }
 
         nameLabel.setText(item.getItemName());
-        nameLabel.setToolTipText(item.getItemName());
+
+        String tooltip = buildTooltip(item);
+        nameLabel.setToolTipText(tooltip);
+        setToolTipText(tooltip);
 
         qtyBadge.setText("Qty " + format(item.getQuantity()));
         valueBadge.setText(item.hasKnownValue() ? format(item.getTotalValue()) + " gp" : "Value -");
@@ -196,6 +198,143 @@ public class StoredItemListCellRenderer extends JPanel implements ListCellRender
             default:
                 return name;
         }
+    }
+
+    private String buildTooltip(StoredItem item)
+    {
+        StringBuilder sb = new StringBuilder(768);
+        sb.append("<html><div style='font-family:sans-serif; font-size:8px;'>");
+        sb.append("<b>").append(escape(item.getItemName())).append("</b>");
+
+        EquipmentStats stats = item.getEquipmentStats();
+        EquipmentStats delta = item.getComparisonStats();
+
+        if (stats != null && stats.hasAnyBonus())
+        {
+            sb.append("<br><table cellspacing='0' cellpadding='0'>");
+            appendTripleRow(sb, "Atk", "Stab", stats.getStab(), delta == null ? null : delta.getStab(),
+                    "Slash", stats.getSlash(), delta == null ? null : delta.getSlash(),
+                    "Crush", stats.getCrush(), delta == null ? null : delta.getCrush());
+            appendDoubleRow(sb, "", "Magic", stats.getMagic(), delta == null ? null : delta.getMagic(),
+                    "Range", stats.getRanged(), delta == null ? null : delta.getRanged());
+
+            appendTripleRow(sb, "Def", "Stab", stats.getStabDef(), delta == null ? null : delta.getStabDef(),
+                    "Slash", stats.getSlashDef(), delta == null ? null : delta.getSlashDef(),
+                    "Crush", stats.getCrushDef(), delta == null ? null : delta.getCrushDef());
+            appendDoubleRow(sb, "", "Magic", stats.getMagicDef(), delta == null ? null : delta.getMagicDef(),
+                    "Range", stats.getRangedDef(), delta == null ? null : delta.getRangedDef());
+
+            appendTripleRow(sb, "Other", "Str", stats.getMeleeStr(), delta == null ? null : delta.getMeleeStr(),
+                    "RStr", stats.getRangedStr(), delta == null ? null : delta.getRangedStr(),
+                    "Pray", stats.getPrayer(), delta == null ? null : delta.getPrayer());
+            appendSingleRow(sb, "", "MDmg", stats.getMagicDmg(), delta == null ? null : delta.getMagicDmg());
+            sb.append("</table>");
+        }
+
+        sb.append("</div></html>");
+        return sb.toString();
+    }
+
+    private void appendTripleRow(StringBuilder sb, String group,
+                                 String l1, int v1, Integer d1,
+                                 String l2, int v2, Integer d2,
+                                 String l3, int v3, Integer d3)
+    {
+        sb.append("<tr>");
+        sb.append("<td width='28'><b>").append(escape(group)).append("</b></td>");
+        appendStatCell(sb, l1, v1, d1);
+        appendStatCell(sb, l2, v2, d2);
+        appendStatCell(sb, l3, v3, d3);
+        sb.append("</tr>");
+    }
+
+    private void appendDoubleRow(StringBuilder sb, String group,
+                                 String l1, int v1, Integer d1,
+                                 String l2, int v2, Integer d2)
+    {
+        sb.append("<tr>");
+        sb.append("<td width='28'>").append(group == null ? "" : escape(group)).append("</td>");
+        appendStatCell(sb, l1, v1, d1);
+        appendStatCell(sb, l2, v2, d2);
+        sb.append("<td></td><td></td>");
+        sb.append("</tr>");
+    }
+
+    private void appendSingleRow(StringBuilder sb, String group, String label, int value, Integer delta)
+    {
+        sb.append("<tr>");
+        sb.append("<td width='28'>").append(group == null ? "" : escape(group)).append("</td>");
+        appendStatCell(sb, label, value, delta);
+        sb.append("<td></td><td></td><td></td><td></td>");
+        sb.append("</tr>");
+    }
+
+    private void appendStatCell(StringBuilder sb, String label, int value, Integer delta)
+    {
+        sb.append("<td style='padding-right:3px; color:#b8b8b8;'>")
+                .append(escape(label))
+                .append("</td>");
+
+        sb.append("<td style='padding-right:7px;'>")
+                .append("<span style='color:")
+                .append(colorForAbsolute(value))
+                .append(";'>")
+                .append(formatSigned(value))
+                .append("</span>");
+
+        if (delta != null)
+        {
+            sb.append(" <span style='color:")
+                    .append(colorForDelta(delta))
+                    .append(";'>(")
+                    .append(formatSigned(delta))
+                    .append(")</span>");
+        }
+
+        sb.append("</td>");
+    }
+
+    private String colorForAbsolute(int value)
+    {
+        if (value > 0)
+        {
+            return "#66ff66";
+        }
+        if (value < 0)
+        {
+            return "#ff6666";
+        }
+        return "#aaaaaa";
+    }
+
+    private String colorForDelta(int value)
+    {
+        if (value > 0)
+        {
+            return "#7CFC7C";
+        }
+        if (value < 0)
+        {
+            return "#FF7C7C";
+        }
+        return "#888888";
+    }
+
+    private String formatSigned(int value)
+    {
+        return value > 0 ? "+" + value : Integer.toString(value);
+    }
+
+    private String escape(String text)
+    {
+        if (text == null)
+        {
+            return "";
+        }
+
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 
     private String format(long value)
