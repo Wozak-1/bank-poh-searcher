@@ -22,54 +22,54 @@ public class SnapshotStore
 		this.gson = gson;
 	}
 
-	public StorageSnapshot loadSnapshot(StorageLocation location)
+	public SnapshotHistory loadSnapshot(StorageLocation location)
 	{
 		String json = configManager.getRSProfileConfiguration(CONFIG_GROUP, location.getConfigKey());
 		if (json == null || json.isBlank())
 		{
-			return new StorageSnapshot();
+			return new SnapshotHistory();
 		}
 
 		try
 		{
-			StorageSnapshot snapshot = gson.fromJson(json, StorageSnapshot.class);
-			return snapshot == null ? new StorageSnapshot() : snapshot;
+			SnapshotHistory history = gson.fromJson(json, SnapshotHistory.class);
+			return history == null ? new SnapshotHistory() : history;
 		}
 		catch (RuntimeException ex)
 		{
-			return new StorageSnapshot();
+			return new SnapshotHistory();
 		}
 	}
 
-	public Map<StorageLocation, StorageSnapshot> loadAllSnapshots()
+	public Map<StorageLocation, SnapshotHistory> loadAllHistories()
 	{
-		Map<StorageLocation, StorageSnapshot> snapshots = new EnumMap<>(StorageLocation.class);
+		Map<StorageLocation, SnapshotHistory> histories = new EnumMap<>(StorageLocation.class);
 		for (StorageLocation location : StorageLocation.values())
 		{
-			snapshots.put(location, loadSnapshot(location));
+			histories.put(location, loadSnapshot(location));
 		}
-		return snapshots;
+		return histories;
 	}
 
-	public void saveSnapshot(StorageLocation location, StorageSnapshot snapshot)
+	public void saveHistory(StorageLocation location, SnapshotHistory history)
 	{
 		configManager.setRSProfileConfiguration(
 				CONFIG_GROUP,
 				location.getConfigKey(),
-				gson.toJson(snapshot == null ? new StorageSnapshot() : snapshot)
+				gson.toJson(history == null ? new SnapshotHistory() : history)
 		);
 	}
 
-	public void saveAllSnapshots(Map<StorageLocation, StorageSnapshot> snapshots)
+	public void saveAllHistories(Map<StorageLocation, SnapshotHistory> histories)
 	{
-		if (snapshots == null)
+		if (histories == null)
 		{
 			return;
 		}
 
-		for (Map.Entry<StorageLocation, StorageSnapshot> entry : snapshots.entrySet())
+		for (Map.Entry<StorageLocation, SnapshotHistory> entry : histories.entrySet())
 		{
-			saveSnapshot(entry.getKey(), entry.getValue());
+			saveHistory(entry.getKey(), entry.getValue());
 		}
 	}
 }

@@ -6,6 +6,7 @@ import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
+import java.util.Comparator;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.ArrayList;
@@ -67,6 +68,8 @@ public class WheresMyStuffPanel extends PluginPanel
 	private final JLabel bankSummaryLabel = new JLabel("Bank");
 	private final JLabel pohSummaryLabel = new JLabel("POH");
 	private final JPanel statusRowsPanel = new JPanel();
+	private final JButton sortButton = new JButton();
+	private SortMode sortMode = SortMode.ALPHABETICAL;
 
 	private final DefaultListModel<StoredItem> bankListModel = new DefaultListModel<>();
 	private final DefaultListModel<StoredItem> pohListModel = new DefaultListModel<>();
@@ -101,6 +104,38 @@ public class WheresMyStuffPanel extends PluginPanel
 	@Inject
 	private WheresMyStuffConfig config;
 
+	private enum SortMode
+	{
+		ALPHABETICAL("A-Z", "Alphabetical"),
+		VALUE("Value", "Value"),
+		RECENTLY_CHANGED("Recent", "Recently changed");
+
+		private final String buttonLabel;
+		private final String displayName;
+
+		SortMode(String buttonLabel, String displayName)
+		{
+			this.buttonLabel = buttonLabel;
+			this.displayName = displayName;
+		}
+
+		private String getButtonLabel()
+		{
+			return buttonLabel;
+		}
+
+		private String getDisplayName()
+		{
+			return displayName;
+		}
+
+		private SortMode next()
+		{
+			SortMode[] values = values();
+			return values[(ordinal() + 1) % values.length];
+		}
+	}
+
 	private JList<StoredItem> createItemList(DefaultListModel<StoredItem> model, boolean showLocation)
 	{
 		JList<StoredItem> list = new JList<>(model);
@@ -120,7 +155,8 @@ public class WheresMyStuffPanel extends PluginPanel
 				1500000,
 				showLocation ? StorageLocation.MAGIC_WARDROBE : StorageLocation.BANK,
 				null,
-				null
+				null,
+				0L
 		));
 		return list;
 	}
@@ -148,6 +184,7 @@ public class WheresMyStuffPanel extends PluginPanel
 		add(content, BorderLayout.CENTER);
 
 		searchField.getDocument().addDocumentListener((docListener) this::applyFilters);
+		sortButton.addActionListener(e -> cycleSortMode());
 	}
 
 	private JPanel createTitlePanel()
@@ -191,6 +228,8 @@ public class WheresMyStuffPanel extends PluginPanel
 		searchLabel.setForeground(MUTED);
 		searchLabel.setFont(searchLabel.getFont().deriveFont(java.awt.Font.BOLD, 11f));
 
+		styleSortButton();
+
 		searchField.setBackground(TABLE_BG);
 		searchField.setForeground(HEADER);
 		searchField.setCaretColor(HEADER);
@@ -203,11 +242,16 @@ public class WheresMyStuffPanel extends PluginPanel
 		searchField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
 		searchField.setToolTipText("Search by item name or location");
 
+		JPanel headerRow = new JPanel(new BorderLayout());
+		headerRow.setBackground(CARD_BG);
+		headerRow.add(searchLabel, BorderLayout.WEST);
+		headerRow.add(sortButton, BorderLayout.EAST);
+
 		JPanel fieldHolder = new JPanel(new BorderLayout());
 		fieldHolder.setBackground(CARD_BG);
 		fieldHolder.add(searchField, BorderLayout.NORTH);
 
-		panel.add(searchLabel, BorderLayout.NORTH);
+		panel.add(headerRow, BorderLayout.NORTH);
 		panel.add(fieldHolder, BorderLayout.CENTER);
 		return panel;
 	}
@@ -262,6 +306,71 @@ public class WheresMyStuffPanel extends PluginPanel
 		snapshotWrapper.add(statusRowsPanel, BorderLayout.CENTER);
 
 		return snapshotWrapper;
+	}
+
+	private void styleSortButton()
+	{
+		sortButton.setText(sortMode.getButtonLabel());
+		sortButton.setToolTipText("Sorting: " + sortMode.getDisplayName());
+		sortButton.setFocusPainted(false);
+		sortButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		sortButton.setForeground(TAB_TEXT);
+		sortButton.setBackground(TAB_BG);
+		sortButton.setOpaque(true);
+		sortButton.setContentAreaFilled(true);
+		sortButton.setFont(sortButton.getFont().deriveFont(java.awt.Font.BOLD, 10f));
+		sortButton.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(new Color(70, 70, 70)),
+				BorderFactory.createEmptyBorder(4, 10, 4, 10)
+		));
+	}
+
+	private void cycleSortMode()
+	{
+		sortMode = sortMode.next();
+		styleSortButton();
+		applyFilters();
+	}
+
+	private Comparator<StoredItem> getComparator(boolean includeLocation)
+	{
+		switch (sortMode)
+		{
+			case VALUE:
+				return Comparator.comparingLong(this::sortableValue).reversed()
+						.thenComparing(StoredItem::getItemName, String.CASE_INSENSITIVE_ORDER)
+						.thenComparing(
+								item -> includeLocation && item.getLocation() != null
+										? item.getLocation().getDisplayName()
+										: "",
+								String.CASE_INSENSITIVE_ORDER
+						);
+
+			case RECENTLY_CHANGED:
+				return Comparator.comparingLong(StoredItem::getItemLastChangedEpochMillis).reversed()
+						.thenComparing(StoredItem::getItemName, String.CASE_INSENSITIVE_ORDER)
+						.thenComparing(
+								item -> includeLocation && item.getLocation() != null
+										? item.getLocation().getDisplayName()
+										: "",
+								String.CASE_INSENSITIVE_ORDER
+						);
+
+			case ALPHABETICAL:
+			default:
+				return Comparator.comparing(StoredItem::getItemName, String.CASE_INSENSITIVE_ORDER)
+						.thenComparing(
+								item -> includeLocation && item.getLocation() != null
+										? item.getLocation().getDisplayName()
+										: "",
+								String.CASE_INSENSITIVE_ORDER
+						);
+		}
+	}
+
+	private long sortableValue(StoredItem item)
+	{
+		return item.hasKnownValue() ? item.getTotalValue() : Long.MIN_VALUE;
 	}
 
 	private void toggleSnapshots()
@@ -593,6 +702,9 @@ public class WheresMyStuffPanel extends PluginPanel
 				filteredPoh.add(item);
 			}
 		}
+
+		filteredBank.sort(getComparator(false));
+		filteredPoh.sort(getComparator(true));
 
 		reloadRows(bankListModel, filteredBank);
 		reloadRows(pohListModel, filteredPoh);

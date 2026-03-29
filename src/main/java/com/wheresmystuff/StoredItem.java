@@ -6,6 +6,7 @@ public class StoredItem
 	private final String itemName;
 	private final int quantity;
 	private final int unitPrice;
+	private final long itemLastChangedEpochMillis;
 	private final long totalValue;
 	private final StorageLocation location;
 	private final EquipmentStats equipmentStats;
@@ -18,7 +19,8 @@ public class StoredItem
 			int unitPrice,
 			StorageLocation location,
 			EquipmentStats equipmentStats,
-			EquipmentStats comparisonStats)
+			EquipmentStats comparisonStats,
+			long itemLastChangedEpochMillis)
 	{
 		this.itemId = itemId;
 		this.itemName = itemName;
@@ -28,6 +30,7 @@ public class StoredItem
 		this.location = location;
 		this.equipmentStats = equipmentStats;
 		this.comparisonStats = comparisonStats;
+		this.itemLastChangedEpochMillis = itemLastChangedEpochMillis;
 	}
 
 	public int getItemId()
@@ -83,5 +86,10 @@ public class StoredItem
 	public boolean hasComparisonStats()
 	{
 		return comparisonStats != null && comparisonStats.hasAnyBonus();
+	}
+
+	public long getItemLastChangedEpochMillis()
+	{
+		return itemLastChangedEpochMillis;
 	}
 }

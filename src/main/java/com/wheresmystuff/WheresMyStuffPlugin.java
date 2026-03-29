@@ -3,7 +3,6 @@ package com.wheresmystuff;
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import net.runelite.api.EquipmentInventorySlot;
@@ -76,7 +75,7 @@ public class WheresMyStuffPlugin extends Plugin
 	@Inject
 	private PohStorageScanner pohStorageScanner;
 
-	private Map<StorageLocation, StorageSnapshot> snapshots = new EnumMap<>(StorageLocation.class);
+	private Map<StorageLocation, SnapshotHistory> snapshots = new EnumMap<>(StorageLocation.class);
 	private boolean loadedForLoggedInProfile = false;
 	private Integer pendingPohGroupId = null;
 	private int pendingPohScanTicks = 0;
@@ -119,7 +118,7 @@ public class WheresMyStuffPlugin extends Plugin
 		snapshots = new EnumMap<>(StorageLocation.class);
 		for (StorageLocation location : StorageLocation.values())
 		{
-			snapshots.put(location, new StorageSnapshot());
+			snapshots.put(location, new SnapshotHistory());
 		}
 
 		panel.refresh();
@@ -402,7 +401,7 @@ public class WheresMyStuffPlugin extends Plugin
 
 	private void loadSnapshotsForCurrentProfile()
 	{
-		Map<StorageLocation, StorageSnapshot> loaded = snapshotStore.loadAllSnapshots();
+		Map<StorageLocation, SnapshotHistory> loaded = snapshotStore.loadAllHistories();
 
 		snapshots = new EnumMap<>(StorageLocation.class);
 		if (loaded != null)
@@ -412,10 +411,8 @@ public class WheresMyStuffPlugin extends Plugin
 
 		for (StorageLocation location : StorageLocation.values())
 		{
-			snapshots.computeIfAbsent(location, ignored -> new StorageSnapshot());
+			snapshots.computeIfAbsent(location, ignored -> new SnapshotHistory());
 		}
-
-		loadedForLoggedInProfile = true;
 	}
 
 	public void requestPanelRefresh()
@@ -438,7 +435,7 @@ public class WheresMyStuffPlugin extends Plugin
 			return;
 		}
 
-		snapshotStore.saveAllSnapshots(snapshots);
+		snapshotStore.saveAllHistories(snapshots);
 	}
 
 	private void scanBank(ItemContainer bank)
@@ -472,22 +469,61 @@ public class WheresMyStuffPlugin extends Plugin
 		replaceSnapshot(StorageLocation.BANK, quantities);
 	}
 
+	private static final int MAX_HISTORY = 5;
+
 	void replaceSnapshot(StorageLocation location, Map<Integer, Integer> quantities)
 	{
-		StorageSnapshot snapshot = getSnapshot(location);
+		SnapshotHistory history = snapshots.computeIfAbsent(location, ignored -> new SnapshotHistory());
+		List<StorageSnapshot> snapshots = history.getSnapshots();
+
+		StorageSnapshot snapshot = new StorageSnapshot();
 		snapshot.replaceAll(quantities);
-		snapshotStore.saveSnapshot(location, snapshot);
+
+		if (!snapshots.isEmpty())
+		{
+			StorageSnapshot previous = snapshots.get(snapshots.size() - 1);
+			if (sameQuantities(previous, snapshot))
+			{
+				return;
+			}
+		}
+
+		snapshots.add(snapshot);
+
+		while (snapshots.size() > MAX_HISTORY)
+		{
+			snapshots.remove(0);
+		}
+
+		snapshotStore.saveHistory(location, history);
 		SwingUtilities.invokeLater(panel::refresh);
+	}
+
+	private boolean sameQuantities(StorageSnapshot a, StorageSnapshot b)
+	{
+		if (a == null || b == null)
+		{
+			return false;
+		}
+
+		return a.getQuantities().equals(b.getQuantities());
 	}
 
 	public StorageSnapshot getSnapshot(StorageLocation location)
 	{
-		return snapshots.computeIfAbsent(location, ignored -> new StorageSnapshot());
+		SnapshotHistory history = snapshots.computeIfAbsent(location, ignored -> new SnapshotHistory());
+		List<StorageSnapshot> snapshots = history.getSnapshots();
+		return snapshots.isEmpty() ? new StorageSnapshot() : snapshots.get(snapshots.size() - 1);
 	}
 
 	public Map<StorageLocation, StorageSnapshot> getSnapshots()
 	{
-		return new EnumMap<>(snapshots);
+		Map<StorageLocation, StorageSnapshot> latest = new EnumMap<>(StorageLocation.class);
+		for (StorageLocation location : StorageLocation.values())
+		{
+			latest.put(location, getSnapshot(location));
+		}
+		return latest;
 	}
 
 
@@ -513,25 +549,55 @@ public class WheresMyStuffPlugin extends Plugin
 			rows.addAll(buildRowsForLocation(location));
 		}
 
-		rows.sort(
-				Comparator.comparing(StoredItem::getItemName, String.CASE_INSENSITIVE_ORDER)
-						.thenComparing(item -> item.getLocation().getDisplayName(), String.CASE_INSENSITIVE_ORDER)
-		);
-
 		return rows;
+	}
+
+	private long findItemLastChangedEpochMillis(List<StorageSnapshot> snapshots, int itemId)
+	{
+		if (snapshots == null || snapshots.isEmpty())
+		{
+			return 0L;
+		}
+
+		StorageSnapshot current = snapshots.get(snapshots.size() - 1);
+		Integer currentQty = current.getQuantities().get(itemId);
+
+		if (currentQty == null || currentQty <= 0)
+		{
+			return 0L;
+		}
+
+		long fallback = current.getMetadata() == null ? 0L : current.getMetadata().getLastUpdated();
+
+		for (int i = snapshots.size() - 2; i >= 0; i--)
+		{
+			StorageSnapshot older = snapshots.get(i);
+			Integer olderQty = older.getQuantities().get(itemId);
+
+			if (olderQty == null || !olderQty.equals(currentQty))
+			{
+				return fallback;
+			}
+
+			fallback = older.getMetadata() == null ? fallback : older.getMetadata().getLastUpdated();
+		}
+
+		return fallback;
 	}
 
 	private List<StoredItem> buildRowsForLocation(StorageLocation location)
 	{
 		List<StoredItem> rows = new ArrayList<>();
-		StorageSnapshot snapshot = getSnapshot(location);
 
-		if (snapshot == null)
+		SnapshotHistory history = snapshots.computeIfAbsent(location, ignored -> new SnapshotHistory());
+		List<StorageSnapshot> snapshots = history.getSnapshots();
+
+		if (snapshots == null || snapshots.isEmpty())
 		{
-			debug("buildRowsForLocation " + location + " snapshot = null");
 			return rows;
 		}
 
+		StorageSnapshot snapshot = snapshots.get(snapshots.size() - 1);
 		Map<Integer, Integer> quantities = snapshot.getQuantities();
 		debug("buildRowsForLocation " + location + " quantities size = " + (quantities == null ? "null" : quantities.size()));
 
@@ -541,8 +607,6 @@ public class WheresMyStuffPlugin extends Plugin
 		}
 
 		Map<Integer, EquipmentStats> equippedBySlot = buildCurrentlyEquippedStatsBySlot();
-
-		int added = 0;
 
 		for (Map.Entry<Integer, Integer> entry : quantities.entrySet())
 		{
@@ -561,6 +625,8 @@ public class WheresMyStuffPlugin extends Plugin
 			{
 				continue;
 			}
+
+			long itemLastChangedEpochMillis = findItemLastChangedEpochMillis(snapshots, rawId);
 
 			String name = "Item " + rawId;
 			int price = 0;
@@ -605,13 +671,10 @@ public class WheresMyStuffPlugin extends Plugin
 					price,
 					location,
 					equipmentStats,
-					comparisonStats
+					comparisonStats,
+					itemLastChangedEpochMillis
 			));
-			added++;
 		}
-
-		rows.sort(Comparator.comparing(StoredItem::getItemName, String.CASE_INSENSITIVE_ORDER));
-		debug("buildRowsForLocation " + location + " added rows = " + added);
 
 		return rows;
 	}
