@@ -469,8 +469,6 @@ public class WheresMyStuffPlugin extends Plugin
 		replaceSnapshot(StorageLocation.BANK, quantities);
 	}
 
-	private static final int MAX_HISTORY = 5;
-
 	void replaceSnapshot(StorageLocation location, Map<Integer, Integer> quantities)
 	{
 		SnapshotHistory history = snapshots.computeIfAbsent(location, ignored -> new SnapshotHistory());
@@ -490,7 +488,7 @@ public class WheresMyStuffPlugin extends Plugin
 
 		snapshots.add(snapshot);
 
-		while (snapshots.size() > MAX_HISTORY)
+		while (snapshots.size() > config.snapshotCount())
 		{
 			snapshots.remove(0);
 		}

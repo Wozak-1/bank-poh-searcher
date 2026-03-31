@@ -262,11 +262,14 @@ public class WheresMyStuffPanel extends PluginPanel
 		panel.setLayout(new BorderLayout());
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
-		JPanel inner = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+		JPanel inner = new JPanel(new java.awt.GridLayout(1, 2, 12, 0));
 		inner.setBackground(CARD_BG);
 
 		styleSummaryLabel(bankSummaryLabel);
 		styleSummaryLabel(pohSummaryLabel);
+
+		bankSummaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
+		pohSummaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
 		inner.add(bankSummaryLabel);
 		inner.add(pohSummaryLabel);
@@ -639,7 +642,7 @@ public class WheresMyStuffPanel extends PluginPanel
 	private void styleSummaryLabel(JLabel label)
 	{
 		label.setForeground(HEADER);
-		label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD, 11f));
+		label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD, 10f));
 	}
 
 	public void refresh()
@@ -677,6 +680,69 @@ public class WheresMyStuffPanel extends PluginPanel
 
 		bankSummaryLabel.setText("Bank: " + bankRows + " result" + (bankRows == 1 ? "" : "s"));
 		pohSummaryLabel.setText("POH: " + pohRows + " result" + (pohRows == 1 ? "" : "s"));
+
+		long bankTotalValue = sumKnownValue(bankListModel);
+		long pohTotalValue = sumKnownValue(pohListModel);
+
+		bankSummaryLabel.setToolTipText(buildSummaryTooltip("Bank", bankRows, bankTotalValue));
+		pohSummaryLabel.setToolTipText(buildSummaryTooltip("POH", pohRows, pohTotalValue));
+	}
+
+	private long sumKnownValue(DefaultListModel<StoredItem> model)
+	{
+		long total = 0L;
+
+		for (int i = 0; i < model.size(); i++)
+		{
+			StoredItem item = model.get(i);
+			if (item != null && item.hasKnownValue())
+			{
+				total += item.getTotalValue();
+			}
+		}
+
+		return total;
+	}
+
+	private String buildSummaryTooltip(String label, int rows, long totalValue)
+	{
+		return "<html><div style='font-family:sans-serif; font-size:9px; color:#b8b8b8;'>"
+				+ "<span style='color:#ffffff;'>" + escapeHtml(label) + "</span><br>"
+				+ "Results: " + rows + "<br>"
+				+ "<span style='color:#e1d478;'>"
+				+ formatValue(totalValue) + " gp"
+				+ "</span>"
+				+ "</div></html>";
+	}
+
+	private String escapeHtml(String text)
+	{
+		if (text == null)
+		{
+			return "";
+		}
+
+		return text.replace("&", "&amp;")
+				.replace("<", "&lt;")
+				.replace(">", "&gt;");
+	}
+
+	private String formatValue(long value)
+	{
+		return String.format("%,d", value);
+		/*if (value >= 1_000_000_000L) //old format method. I like specifics better
+		{
+			return String.format("%.1fb", value / 1_000_000_000.0);
+		}
+		if (value >= 1_000_000L)
+		{
+			return String.format("%.1fm", value / 1_000_000.0);
+		}
+		if (value >= 1_000L)
+		{
+			return String.format("%.1fk", value / 1_000.0);
+		}
+		return Long.toString(value);*/
 	}
 
 	private void applyFilters()

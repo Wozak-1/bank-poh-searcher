@@ -27,27 +27,28 @@ public interface WheresMyStuffConfig extends Config
 	)
 	default int staleAfterHours()
 	{
+
 		return 168;
-	}
-
-	default Duration warningAfter()
-	{
-		return Duration.ofHours(Math.max(1, warningAfterHours()));
-	}
-
-	default Duration staleAfter()
-	{
-		return Duration.ofHours(Math.max(warningAfterHours() + 1, staleAfterHours()));
 	}
 
 	@ConfigItem(
 			keyName = "debugg",
 			name = "Debug",
 			description = "Warning, will flood your chat.",
-			position = 3
+			position = 4
 	)
 	default boolean debugg()
 	{
 		return false;
+	}
+	@ConfigItem(
+			keyName = "snapshotCount",
+			name = "Snapshot Count",
+			description = "Number of snapshots for comparing bank history. Default 5.",
+			position = 3
+	)
+	default int snapshotCount()
+	{
+		return 5;
 	}
 }
