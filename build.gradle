@@ -14,7 +14,7 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-def pluginMainClass = 'com.wheresmystuff.WheresMyStuffPlugin'
+def pluginMainClass = 'com.runwms.WheresMyStuffPlugin'
 
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
@@ -27,8 +27,7 @@ dependencies {
 	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
 }
 
-group = 'com.example'
-version = '1.0-SNAPSHOT'
+group = 'com.runwms'
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
