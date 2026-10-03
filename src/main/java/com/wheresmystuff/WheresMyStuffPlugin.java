@@ -627,7 +627,7 @@ public class WheresMyStuffPlugin extends Plugin
 			long itemLastChangedEpochMillis = findItemLastChangedEpochMillis(snapshots, rawId);
 
 			String name = "Item " + rawId;
-			int price = 0;
+			long price = 0;
 			EquipmentStats equipmentStats = null;
 			EquipmentStats comparisonStats = null;
 

@@ -5,7 +5,7 @@ public class StoredItem
 	private final int itemId;
 	private final String itemName;
 	private final int quantity;
-	private final int unitPrice;
+	private final long unitPrice;
 	private final long itemLastChangedEpochMillis;
 	private final long totalValue;
 	private final StorageLocation location;
@@ -16,7 +16,7 @@ public class StoredItem
 			int itemId,
 			String itemName,
 			int quantity,
-			int unitPrice,
+			long unitPrice,
 			StorageLocation location,
 			EquipmentStats equipmentStats,
 			EquipmentStats comparisonStats,
@@ -48,7 +48,7 @@ public class StoredItem
 		return quantity;
 	}
 
-	public int getUnitPrice()
+	public long getUnitPrice()
 	{
 		return unitPrice;
 	}
